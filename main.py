@@ -1,11 +1,16 @@
 # coding=utf-8
-import time, os, sys, subprocess
+import time
+import os
+import sys
+import subprocess
 
 PY2 = sys.version_info[0] == 2
+
 
 class Reloader(object):
 
     RELOADING_CODE = 3
+
     def start_process(self):
         """Spawn a new Python interpreter with the same arguments as this one,
         but running the reloader thread.
@@ -37,6 +42,7 @@ class Reloader(object):
     def log_reload(self):
         print("reloading...")
 
+
 def run_with_reloader(root, *hotkeys):
     """Run the given application in an independent python interpreter."""
     import signal
@@ -47,7 +53,7 @@ def run_with_reloader(root, *hotkeys):
 
             for hotkey in hotkeys:
                 root.bind_all(hotkey, lambda event: reloader.trigger_reload())
-                
+
             if os.name == 'nt':
                 root.wm_state("iconic")
                 root.wm_state("zoomed")
@@ -58,30 +64,29 @@ def run_with_reloader(root, *hotkeys):
     except KeyboardInterrupt:
         pass
 
+
 if __name__ == "__main__":
     from tkinter import Tk, Label
-    
+
     class App(Tk):
         def __init__(self):
-            win = Tk.__init__(self)
+            Tk.__init__(self)
 
-            win.resizable(False, False)
-            win.title("Mã hóa")
+            self.title("Mã hóa")
+            self.resizable(False, False)
 
             window_height = 500
             window_width = 900
 
-            screen_width = win.winfo_screenwidth()
-            screen_height = win.winfo_screenheight()
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
 
             x_cordinate = int((screen_width/2) - (window_width/2))
             y_cordinate = int((screen_height/2) - (window_height/2))
 
             # Hiển thị giữa màn hình
-            win.geometry("{}x{}+{}+{}".format(window_width,
-                        window_height, x_cordinate, y_cordinate))
-
-            Label(self, text="Press Control+r to reload...").pack()
+            self.geometry("{}x{}+{}+{}".format(window_width,
+                          window_height, x_cordinate, y_cordinate))
 
     run_with_reloader(App(), "<Control-R>", "<Control-r>")
 
