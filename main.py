@@ -3,6 +3,7 @@ import time
 import os
 import sys
 import subprocess
+import tink
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
