@@ -4,10 +4,11 @@ import os
 import sys
 import subprocess
 import tink
+from tink import aead
+from tink import cleartext_keyset_handle
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
-
 PY2 = sys.version_info[0] == 2
 APP_HEIGHT = 350
 APP_WIDTH = 700
@@ -140,12 +141,12 @@ def encryption(root):
         print(plaintextInput.get())
 
     encryptionBtn = Button(root, text="Encryption", command=encryption)
-    encryptionBtn.grid(row=2, column=0, pady=4, padx=4)
+    encryptionBtn.grid(row=1, column=2, pady=4, padx=4)
 
     cipherTextLabel = Label(root, text="CipherText")
-    cipherTextLabel.grid(row=3)
+    cipherTextLabel.grid(row=2)
     cipherTextInput = Entry(root)
-    cipherTextInput.grid(column=1, row=3)
+    cipherTextInput.grid(column=1, row=2)
 
 
 def decryption(root):
@@ -170,12 +171,12 @@ def decryption(root):
         print(plaintextInput.get())
 
     decryptionBtn = Button(root, text="Decryption", command=decryption)
-    decryptionBtn.grid(row=2, column=0, pady=4, padx=4)
+    decryptionBtn.grid(row=1, column=2, pady=4, padx=4)
 
     plaintextLabel = Label(root, text="Plaintext")
-    plaintextLabel.grid(row=3)
+    plaintextLabel.grid(row=2)
     plaintextInput = Entry(root)
-    plaintextInput.grid(column=1, row=3)
+    plaintextInput.grid(column=1, row=2)
 
 
 if __name__ == "__main__":
