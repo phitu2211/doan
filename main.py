@@ -10,8 +10,8 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 PY2 = sys.version_info[0] == 2
-APP_HEIGHT = 350
-APP_WIDTH = 700
+APP_HEIGHT = 200
+APP_WIDTH = 450
 APP_NAME = 'Tool - PhiDinhTuAnh - AT140402'
 
 
@@ -102,21 +102,40 @@ def create_tab(root):
 
 
 def key_generation(root):
-    seedLabel = Label(root, text="Seed")
-    seedLabel.grid(row=0)
-    seedInput = Entry(root)
-    seedInput.grid(column=1, row=0)
+    # seedLabel = Label(root, text="Seed")
+    # seedLabel.grid(row=0)
+    # seedInput = Entry(root)
+    # seedInput.grid(column=1, row=0)
 
     def generate():
-        print(seedInput.get())
+        try:
+            key_template = aead.aead_key_templates.AES128_GCM
+            keyset_handle = tink.KeysetHandle.generate_new(key_template)
+        except tink.TinkError as e:
+            print('Error creating primitive')
+            print(e)
+
+        file = save_file()
+        with open(file.name, 'wt') as keyset_file:
+            try:
+                cleartext_keyset_handle.write(
+                    tink.JsonKeysetWriter(keyset_file), keyset_handle)
+
+                # keyset_handle.write(
+                #     tink.JsonKeysetWriter(keyset_file), keyset_handle.primitive(aead.Aead))
+            except tink.TinkError as e:
+                print('Error writing key')
+                print(e)
+
+        # print(seedInput.get())
 
     genKeyBtn = Button(root, text='Gen Key', command=generate)
     genKeyBtn.grid(row=1, column=1, pady=4)
 
-    keyLabel = Label(root, text="Key")
-    keyLabel.grid(row=2)
-    keyInput = Entry(root)
-    keyInput.grid(column=1, row=2)
+    # keyLabel = Label(root, text="Key")
+    # keyLabel.grid(row=2)
+    # keyInput = Entry(root)
+    # keyInput.grid(column=1, row=2)
 
 
 def encryption(root):
@@ -125,11 +144,11 @@ def encryption(root):
     plaintextInput = Entry(root)
     plaintextInput.grid(row=0, column=1)
 
-    def browse_func():
+    def open_plain_file():
         filename = filedialog.askopenfilename()
         plaintextInput.insert(END, filename)
 
-    openFileBtn = Button(root, text="Open file", command=browse_func)
+    openFileBtn = Button(root, text="Open file", command=open_plain_file)
     openFileBtn.grid(row=0, column=2, pady=4, padx=4)
 
     keyLabel = Label(root, text="Key")
@@ -137,16 +156,37 @@ def encryption(root):
     keyInput = Entry(root)
     keyInput.grid(column=1, row=1)
 
+    def open_key_file():
+        filename = filedialog.askopenfilename()
+        keyInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open key", command=open_key_file)
+    openFileBtn.grid(row=1, column=2, pady=4, padx=4)
+
     def encryption():
-        print(plaintextInput.get())
+        associated_data = b''
+
+        cipher = get_cipher(keyInput.get())
+
+        with open(plaintextInput.get(), 'rb') as input_file:
+            input_data = input_file.read()
+            # output_data = cipher.decrypt(input_data, associated_data)
+        # input_data = plaintextInput.get()
+            output_data = cipher.encrypt(input_data, associated_data)
+
+        files = [('All Files', '*.*')]
+        file = filedialog.asksaveasfile(
+            filetypes=files, defaultextension=files)
+        with open(file.name, 'wb') as output_file:
+            output_file.write(output_data)
 
     encryptionBtn = Button(root, text="Encryption", command=encryption)
-    encryptionBtn.grid(row=1, column=2, pady=4, padx=4)
+    encryptionBtn.grid(row=2, column=2, pady=4, padx=4)
 
-    cipherTextLabel = Label(root, text="CipherText")
-    cipherTextLabel.grid(row=2)
-    cipherTextInput = Entry(root)
-    cipherTextInput.grid(column=1, row=2)
+    # cipherTextLabel = Label(root, text="CipherText")
+    # cipherTextLabel.grid(row=2)
+    # cipherTextInput = Entry(root)
+    # cipherTextInput.grid(column=1, row=2)
 
 
 def decryption(root):
@@ -155,11 +195,11 @@ def decryption(root):
     cipherTextInput = Entry(root)
     cipherTextInput.grid(row=0, column=1)
 
-    def browse_func():
+    def open_cipher_file():
         filename = filedialog.askopenfilename()
         cipherTextInput.insert(END, filename)
 
-    openFileBtn = Button(root, text="Open file", command=browse_func)
+    openFileBtn = Button(root, text="Open file", command=open_cipher_file)
     openFileBtn.grid(row=0, column=2, pady=4, padx=4)
 
     keyLabel = Label(root, text="Key")
@@ -167,16 +207,70 @@ def decryption(root):
     keyInput = Entry(root)
     keyInput.grid(column=1, row=1)
 
+    def open_key_file():
+        filename = filedialog.askopenfilename()
+        keyInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open key", command=open_key_file)
+    openFileBtn.grid(row=1, column=2, pady=4, padx=4)
+
     def decryption():
-        print(plaintextInput.get())
+        associated_data = b''
+
+        cipher = get_cipher(keyInput.get())
+
+        with open(cipherTextInput.get(), 'rb') as input_file:
+            input_data = input_file.read()
+            output_data = cipher.decrypt(input_data, associated_data)
+
+        files = [('All Files', '*.*')]
+        file = filedialog.asksaveasfile(
+            filetypes=files, defaultextension=files)
+        with open(file.name, 'wb') as output_file:
+            output_file.write(output_data)
 
     decryptionBtn = Button(root, text="Decryption", command=decryption)
-    decryptionBtn.grid(row=1, column=2, pady=4, padx=4)
+    decryptionBtn.grid(row=2, column=1, pady=4, padx=4)
 
-    plaintextLabel = Label(root, text="Plaintext")
-    plaintextLabel.grid(row=2)
-    plaintextInput = Entry(root)
-    plaintextInput.grid(column=1, row=2)
+#     plaintextLabel = Label(root, text="Plaintext")
+#     plaintextLabel.grid(row=2)
+#     plaintextInput = Entry(root)
+#     plaintextInput.grid(column=1, row=2)
+#
+#
+
+
+def save_file():
+    files = [('All Files', '*.*')]
+    file = filedialog.asksaveasfile(
+        filetypes=files, defaultextension=files)
+    return file
+
+
+def get_cipher(path):
+    with open(path, 'rt') as keyset_file:
+        try:
+            text = keyset_file.read()
+            keyset_handle = cleartext_keyset_handle.read(
+                tink.JsonKeysetReader(text))
+        except tink.TinkError as e:
+            print('Error reading key:')
+            print(e)
+
+    try:
+        cipher = keyset_handle.primitive(aead.Aead)
+    except tink.TinkError as e:
+        print('Error creating primitive')
+        print(e)
+
+    return cipher
+
+
+def init_lib():
+    try:
+        aead.register()
+    except tink.TinkError as e:
+        print('Error initialising Tink: %s', e)
 
 
 if __name__ == "__main__":
@@ -184,6 +278,8 @@ if __name__ == "__main__":
     win.title(APP_NAME)
 
     center_screen(win)
+
+    init_lib()
 
     create_tab(win)
 
