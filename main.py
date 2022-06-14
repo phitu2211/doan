@@ -1,17 +1,19 @@
 # coding=utf-8
 import time
+import binascii
 import os
 import sys
 import subprocess
 import tink
 from tink import aead
+from tink import signature
 from tink import cleartext_keyset_handle
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 PY2 = sys.version_info[0] == 2
-APP_HEIGHT = 200
-APP_WIDTH = 450
+APP_HEIGHT = 240
+APP_WIDTH = 500
 APP_NAME = 'Tool - PhiDinhTuAnh - AT140402'
 
 
@@ -90,22 +92,61 @@ def create_tab(root):
     tab1 = Frame(tabControl)
     tab2 = Frame(tabControl)
     tab3 = Frame(tabControl)
+    tab4 = Frame(tabControl)
+    tab5 = Frame(tabControl)
 
     tabControl.add(tab1, text='Key generation')
     tabControl.add(tab2, text='Encryption')
     tabControl.add(tab3, text='Decryption')
-    tabControl.pack(expand=1, fill="both")
+    tabControl.add(tab4, text='Sign')
+    tabControl.add(tab5, text='Verify')
+    tabControl.pack(expand=True, fill="both")
 
     key_generation(tab1)
     encryption(tab2)
     decryption(tab3)
+    sign(tab4)
+    verify(tab5)
 
 
 def key_generation(root):
-    # seedLabel = Label(root, text="Seed")
-    # seedLabel.grid(row=0)
-    # seedInput = Entry(root)
-    # seedInput.grid(column=1, row=0)
+    def generate_ds():
+        try:
+            key_template = signature.signature_key_templates.ECDSA_P256
+            keyset_handle = tink.KeysetHandle.generate_new(key_template)
+        except tink.TinkError as e:
+            print('Error creating primitive')
+            print(e)
+
+        files = [('json', '*.json')]
+        file = filedialog.asksaveasfile(filetypes=files, defaultextension=files, initialfile="signature_private")
+
+        with open(file.name, 'wt') as keyset_file:
+            try:
+                cleartext_keyset_handle.write(
+                    tink.JsonKeysetWriter(keyset_file), keyset_handle)
+
+            except tink.TinkError as e:
+                print('Error writing key')
+                print(e)
+
+        try:
+            keyset_handle = keyset_handle.public_keyset_handle();
+        except tink.TinkError as e:
+            print('Error creating primitive')
+            print(e)
+
+        files = [('json', '*.json')]
+        file = filedialog.asksaveasfile(filetypes=files, defaultextension=files, initialfile="signature_public")
+
+        with open(file.name, 'wt') as keyset_file:
+            try:
+                cleartext_keyset_handle.write(
+                    tink.JsonKeysetWriter(keyset_file), keyset_handle)
+
+            except tink.TinkError as e:
+                print('Error writing key')
+                print(e)
 
     def generate():
         try:
@@ -115,27 +156,22 @@ def key_generation(root):
             print('Error creating primitive')
             print(e)
 
-        file = save_file()
+        files = [('json', '*.json')]
+        file = filedialog.asksaveasfile(filetypes=files, defaultextension=files, initialfile="aead_key")
+
         with open(file.name, 'wt') as keyset_file:
             try:
                 cleartext_keyset_handle.write(
                     tink.JsonKeysetWriter(keyset_file), keyset_handle)
 
-                # keyset_handle.write(
-                #     tink.JsonKeysetWriter(keyset_file), keyset_handle.primitive(aead.Aead))
             except tink.TinkError as e:
                 print('Error writing key')
                 print(e)
 
-        # print(seedInput.get())
-
-    genKeyBtn = Button(root, text='Gen Key', command=generate)
+    genKeyBtn = Button(root, text='Gen Key AEAD', command=generate)
     genKeyBtn.grid(row=1, column=1, pady=4)
-
-    # keyLabel = Label(root, text="Key")
-    # keyLabel.grid(row=2)
-    # keyInput = Entry(root)
-    # keyInput.grid(column=1, row=2)
+    genKeyDsBtn = Button(root, text='Gen Key Digital Signature', command=generate_ds)
+    genKeyDsBtn.grid(row=2, column=1, pady=4)
 
 
 def encryption(root):
@@ -145,6 +181,7 @@ def encryption(root):
     plaintextInput.grid(row=0, column=1)
 
     def open_plain_file():
+        plaintextInput.delete(0, END)
         filename = filedialog.askopenfilename()
         plaintextInput.insert(END, filename)
 
@@ -157,6 +194,7 @@ def encryption(root):
     keyInput.grid(column=1, row=1)
 
     def open_key_file():
+        keyInput.delete(0, END)
         filename = filedialog.askopenfilename()
         keyInput.insert(END, filename)
 
@@ -166,12 +204,10 @@ def encryption(root):
     def encryption():
         associated_data = b''
 
-        cipher = get_cipher(keyInput.get())
+        cipher = get_cipher(keyInput.get(), aead.Aead)
 
         with open(plaintextInput.get(), 'rb') as input_file:
             input_data = input_file.read()
-            # output_data = cipher.decrypt(input_data, associated_data)
-        # input_data = plaintextInput.get()
             output_data = cipher.encrypt(input_data, associated_data)
 
         files = [('All Files', '*.*')]
@@ -181,12 +217,7 @@ def encryption(root):
             output_file.write(output_data)
 
     encryptionBtn = Button(root, text="Encryption", command=encryption)
-    encryptionBtn.grid(row=2, column=2, pady=4, padx=4)
-
-    # cipherTextLabel = Label(root, text="CipherText")
-    # cipherTextLabel.grid(row=2)
-    # cipherTextInput = Entry(root)
-    # cipherTextInput.grid(column=1, row=2)
+    encryptionBtn.grid(row=2, column=1, pady=4, padx=4)
 
 
 def decryption(root):
@@ -196,6 +227,7 @@ def decryption(root):
     cipherTextInput.grid(row=0, column=1)
 
     def open_cipher_file():
+        cipherTextInput.delete(0, END)
         filename = filedialog.askopenfilename()
         cipherTextInput.insert(END, filename)
 
@@ -208,6 +240,7 @@ def decryption(root):
     keyInput.grid(column=1, row=1)
 
     def open_key_file():
+        keyInput.delete(0, END)
         filename = filedialog.askopenfilename()
         keyInput.insert(END, filename)
 
@@ -217,7 +250,7 @@ def decryption(root):
     def decryption():
         associated_data = b''
 
-        cipher = get_cipher(keyInput.get())
+        cipher = get_cipher(keyInput.get(), aead.Aead)
 
         with open(cipherTextInput.get(), 'rb') as input_file:
             input_data = input_file.read()
@@ -232,12 +265,125 @@ def decryption(root):
     decryptionBtn = Button(root, text="Decryption", command=decryption)
     decryptionBtn.grid(row=2, column=1, pady=4, padx=4)
 
-#     plaintextLabel = Label(root, text="Plaintext")
-#     plaintextLabel.grid(row=2)
-#     plaintextInput = Entry(root)
-#     plaintextInput.grid(column=1, row=2)
-#
-#
+def verify(root):
+    cipherTextLabel = Label(root, text="File")
+    cipherTextLabel.grid(row=0)
+    cipherTextInput = Entry(root)
+    cipherTextInput.grid(row=0, column=1)
+
+    signatureLabel = Label(root, text="Signature")
+    signatureLabel.grid(row=2)
+    signatureInput = Entry(root)
+    signatureInput.grid(row=2, column=1)
+
+    def open_signature_file():
+        signatureInput.delete(0, END)
+        filename = filedialog.askopenfilename()
+        signatureInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open signature file", command=open_signature_file)
+    openFileBtn.grid(row=2, column=2, pady=4, padx=4)
+
+    text = StringVar();
+    text.set("");
+
+    resultLabel = Label(root, text='Result: ')
+    resultLabel.grid(row=4, column=0)
+    signatureLabel = Label(root, textvariable=text)
+    signatureLabel.grid(row=4, column=1)
+
+    def open_cipher_file():
+        cipherTextInput.delete(0, END)
+        filename = filedialog.askopenfilename()
+        cipherTextInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open file", command=open_cipher_file)
+    openFileBtn.grid(row=0, column=2, pady=4, padx=4)
+
+    keyLabel = Label(root, text="Public key")
+    keyLabel.grid(row=1)
+    keyInput = Entry(root)
+    keyInput.grid(column=1, row=1)
+
+    def open_key_file():
+        keyInput.delete(0, END)
+        filename = filedialog.askopenfilename()
+        keyInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open key", command=open_key_file)
+    openFileBtn.grid(row=1, column=2, pady=4, padx=4)
+
+    def verify():
+        text.set("");
+
+        cipher = get_cipher(keyInput.get(), signature.PublicKeyVerify)
+
+        with open(cipherTextInput.get(), 'rb') as input_file:
+            input_data = input_file.read()
+
+        with open(signatureInput.get(), 'rb') as signature_file:
+            try:
+              expected_signature = binascii.unhexlify(signature_file.read().strip())
+            except binascii.Error as e:
+              print('Error reading expected code')
+              print(e)
+
+        try:
+            cipher.verify(expected_signature, input_data)
+            text.set("Success");
+        except binascii.Error as e:
+            print("Error reading expected signature")
+            print(e)
+        except tink.TinkError as e:
+            text.set("Signature verification failed");
+            print(e)
+
+    verifyBtn = Button(root, text="Verify", command=verify)
+    verifyBtn.grid(row=3, column=1, pady=4, padx=4)
+
+def sign(root):
+    plaintextLabel = Label(root, text="File")
+    plaintextLabel.grid(row=0)
+    plaintextInput = Entry(root)
+    plaintextInput.grid(row=0, column=1)
+
+    def open_plain_file():
+        plaintextInput.delete(0, END)
+        filename = filedialog.askopenfilename()
+        plaintextInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open file", command=open_plain_file)
+    openFileBtn.grid(row=0, column=2, pady=4, padx=4)
+
+    keyLabel = Label(root, text="Private key")
+    keyLabel.grid(row=1)
+    keyInput = Entry(root)
+    keyInput.grid(column=1, row=1)
+    
+
+    def open_key_file():
+        keyInput.delete(0, END)
+        filename = filedialog.askopenfilename()
+        keyInput.insert(END, filename)
+
+    openFileBtn = Button(root, text="Open key", command=open_key_file)
+    openFileBtn.grid(row=1, column=2, pady=4, padx=4)
+
+    def sign():
+        cipher = get_cipher(keyInput.get(), signature.PublicKeySign)
+
+        with open(plaintextInput.get(), 'rb') as input_file:
+            input_data = input_file.read()
+            output_data = cipher.sign(input_data)
+        
+        files = [('All Files', '*.*')]
+        file = filedialog.asksaveasfile(
+            filetypes=files, defaultextension=files, initialfile="signature")
+        with open(file.name, 'wb') as output_file:
+            output_file.write(binascii.hexlify(output_data))
+
+    signBtn = Button(root, text="Sign", command=sign)
+    signBtn.grid(row=2, column=1, pady=4, padx=4)
 
 
 def save_file():
@@ -247,7 +393,7 @@ def save_file():
     return file
 
 
-def get_cipher(path):
+def get_cipher(path, primitive):
     with open(path, 'rt') as keyset_file:
         try:
             text = keyset_file.read()
@@ -258,7 +404,7 @@ def get_cipher(path):
             print(e)
 
     try:
-        cipher = keyset_handle.primitive(aead.Aead)
+        cipher = keyset_handle.primitive(primitive)
     except tink.TinkError as e:
         print('Error creating primitive')
         print(e)
@@ -269,6 +415,7 @@ def get_cipher(path):
 def init_lib():
     try:
         aead.register()
+        signature.register()
     except tink.TinkError as e:
         print('Error initialising Tink: %s', e)
 
