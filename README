@@ -3,3 +3,9 @@
 System Requires
 
 Python: 3.9
+
+Usage:
+
+- Chạy môi trường pyenv 
+  + MacOS: source ./bin/activate
+- python3 main.py
